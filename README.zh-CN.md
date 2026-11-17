@@ -56,7 +56,7 @@
 - `docs/`：根因、实现说明、验收、OTA 部署、构建与恢复指南。
 - `patches/full-diff-complete.patch`：本次修复的精确 diff，直接从本地工作树导出（`8a5c6be..a51c571`，4 个文件，+337/−3）。
 - `tools/`：两个 OTA 记录处理工具，SHA256 均已与工程记录逐位核对。
-- `tests/descriptor-tests/`：描述符校验结果（65 项）及产出这些结果的校验脚本。
+- `tests/descriptor-tests/`：描述符校验结果（66 项：7 设备描述符 + 41 MS OS 2.0 + 18 配置描述符）及产出这些结果的校验脚本。
 - `evidence/`：脱敏后的串口启动日志与采集元数据。
 - `SHA256SUMS`：覆盖本仓库全部文件的完整性清单。
 

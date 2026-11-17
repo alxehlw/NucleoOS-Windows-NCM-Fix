@@ -28,7 +28,7 @@ The local branch pinned TinyUSB to the tested version and included a reproducibl
 
 ## Validation
 
-The final firmware report records 65/65 descriptor checks PASS (6 device-descriptor checks, 41 MS OS 2.0 / BOS checks, 18 configuration-descriptor checks), a clean full build, and a real Windows 10 test:
+The final firmware report records 66/66 descriptor checks PASS (7 device-descriptor checks, 41 MS OS 2.0 / BOS checks, 18 configuration-descriptor checks), a clean full build, and a real Windows 10 test:
 
 - `USB\MS_COMP_WINNCM` appeared as the first Compatible ID.
 - Microsoft `UsbNcm` bound automatically.

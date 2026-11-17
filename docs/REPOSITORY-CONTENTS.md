@@ -22,7 +22,8 @@ It is **not** a firmware distribution and **not** a copy of the NucleoOS source 
 | `patches/full-diff-complete.patch` | Exact diff `8a5c6be..a51c571` (4 files, +337/−3) | Exported from the local Git worktree |
 | `tools/otadata_plan.py` | OTA record planner / 4 KiB sector generator | Original tool, SHA256 verified |
 | `tools/check_otadata.py` | OTA record decoder and boot-selection simulator | Original tool, SHA256 verified |
-| `tests/descriptor-tests/results_all.txt` | 65/65 descriptor checks with per-field assertions | Produced from the linked ELF |
+| `tests/descriptor-tests/results_all.txt` | 66/66 descriptor checks of the final candidate, with per-field assertions | Recorded output of the final linked ELF; re-established against the shipped BIN |
+| `tests/descriptor-tests/results_all-bcddevice-0100-superseded.txt` | 65-check run of the pre-`0x0101` build | History only; superseded |
 | `tests/descriptor-tests/verification_summary.txt` | Link-symbol table plus partition budget | Produced from the linked ELF and MAP |
 | `tests/descriptor-tests/check_desc.py` | Descriptor byte-level checker | Original tool |
 | `tests/descriptor-tests/check_devdesc_prop.py` | Device-descriptor property checker | Original tool |

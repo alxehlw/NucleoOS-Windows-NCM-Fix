@@ -71,8 +71,10 @@ How the candidate in this project was built and checked. This is a record of wha
 6. Verify in the linked ELF, not in a standalone header compile, that the new code is actually linked:
 
    ```
-   xtensa-esp32s3-elf-nm -C build/nucleos.elf | grep -E "nucleo_bos_desc|nucleo_msos20_set|tud_descriptor_bos_cb|tud_vendor_control_xfer_cb|descriptor_dev_default"
+   xtensa-esp32s3-elf-nm -C build/nucleoos.elf | grep -E "nucleo_bos_desc|nucleo_msos20_set|tud_descriptor_bos_cb|tud_vendor_control_xfer_cb|descriptor_dev_default"
    ```
+
+   The linked image is `build/nucleoos.elf` — that is the name ESP-IDF derives from the project name in `firmware/CMakeLists.txt` (`nucleoos`). There is no `build/nucleos.elf`; if an instruction or script refers to that path, it is wrong.
 
    `tests/descriptor-tests/verification_summary.txt` records the symbol sizes and addresses from the recorded build: `nucleo_bos_desc` 0x21, `nucleo_msos20_set` 0xb2, plus the two callback symbols in `.text`.
 
@@ -80,14 +82,14 @@ How the candidate in this project was built and checked. This is a record of wha
 
    ```
    python3 tests/descriptor-tests/check_desc.py <dump>
-   python3 tests/descriptor-tests/check_devdesc_prop.py build/nucleos.elf
+   python3 tests/descriptor-tests/check_devdesc_prop.py build/nucleoos.elf
    ```
 
    `check_desc.py` re-parses every field from a raw hex dump according to Microsoft's MS OS 2.0 specification and shares no assumptions with the C structs. `check_devdesc_prop.py` reads the device descriptor out of the linked ELF and asserts that only `bcdUSB` differs from the esp_tinyusb default. See `tests/descriptor-tests/README.md`.
 
 ## Expected numbers
 
-- Descriptor checks: **65 PASS** (6 device-descriptor + 41 MS OS 2.0 / BOS + 18 configuration).
+- Descriptor checks: **66 PASS** (7 device-descriptor + 41 MS OS 2.0 / BOS + 18 configuration).
 - `bcdUSB` = `0x0210`, `bcdDevice` = `0x0101` in NCM mode, VID/PID `303A:4006` unchanged.
 - Configuration layout: `interfaces=[(0,0,1,2,13,0),(1,0,0,10,0,1),(1,1,2,10,0,1)]`, `endpoints=[129,130,2]`.
 

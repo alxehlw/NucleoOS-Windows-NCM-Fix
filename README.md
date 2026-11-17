@@ -56,7 +56,7 @@ The detailed test matrix is in [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
 - `docs/` — root cause, implementation, acceptance, OTA deployment, build and recovery guides.
 - `patches/full-diff-complete.patch` — exact diff of the reviewed fix, exported from the local worktree (`8a5c6be..a51c571`, 4 files, +337/−3).
 - `tools/` — the two host-side OTA record tools, both SHA256-verified against the engineering record.
-- `tests/descriptor-tests/` — descriptor verification results (65 checks) and the checkers that produced them.
+- `tests/descriptor-tests/` — descriptor verification results (66 checks: 7 device-descriptor + 41 MS OS 2.0 + 18 configuration) and the checkers that produced them.
 - `evidence/` — sanitized serial startup log and capture metadata.
 - `SHA256SUMS` — integrity manifest covering every file in this repository.
 
