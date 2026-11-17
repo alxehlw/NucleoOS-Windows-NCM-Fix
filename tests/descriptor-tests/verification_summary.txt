@@ -1,7 +1,12 @@
 ### FIRMWARE
-bin_size_bytes: 
-bin_sha256: 
+bin_size_bytes: 3176592
+bin_sha256: 05cf26580fc324e3c4985c27a61f876769add1d8b534b9bf42f1e71e6dbe6e6a
+bin_file: nucleos-0.8.7.0-msos20-winncm-r0101.bin (hash published; binary not redistributed)
+elf_sha256: c27962647b03d31c52ab96164e288ed5aa52f959dcd47e748281bfc3adc0c216 (final linked ELF; build tree not retained)
 app_partition: 0x380000 (3670016 B)
+image_size_bytes: 3176592 (0x307890)
+headroom_bytes: 493424 (13.4% of the OTA slot)
+descriptor_checks: 66 (7 device-descriptor + 41 BOS/MS OS 2.0 + 18 configuration), 0 FAIL
 
 ### LINK SYMBOLS
 3c2cf6c0 00000012 D descriptor_dev_default
@@ -11,3 +16,9 @@ app_partition: 0x380000 (3670016 B)
 3c2c52ec 00000012 d s_net_dev_desc
 42114f38 00000008 T tud_descriptor_bos_cb
 42114f40 00000052 T tud_vendor_control_xfer_cb
+
+### NOTES
+Symbol addresses above are from the final linked ELF. In the shipped binary each of them maps to
+its file offset by the constant 0x3c250000: s_net_dev_desc -> 0x752ec, s_net_cfg -> 0x7530a,
+nucleo_bos_desc -> 0x75368, nucleo_msos20_set -> 0x75389. The descriptor bytes at those offsets
+were re-read and match the ELF-time dumps byte for byte.

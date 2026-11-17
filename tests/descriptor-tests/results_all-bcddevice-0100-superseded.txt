@@ -1,0 +1,92 @@
+# SUPERSEDED — this run predates the bcdDevice 0x0101 integration.
+#
+# It was produced from an earlier linked ELF whose NCM device descriptor still carried bcdDevice
+# 0x0100, against the older 6-assertion device-descriptor checker. 6 + 41 + 18 = 65.
+# Kept as history. The authoritative final-candidate result is results_all.txt (66 checks).
+# Do not cite this file as the result of the final firmware.
+
+# verification results (all parsed from the linked nucleoos.elf)
+s_net_dev_desc        12 01 10 02 00 00 00 40 3a 30 06 40 00 01 01 02 03 01  (18 B, .flash.rodata)
+descriptor_dev_default 12 01 00 02 00 00 00 40 3a 30 06 40 00 01 01 02 03 01  (18 B)
+  PASS  both descriptors are 18 bytes
+  PASS  bcdUSB of the NCM device descriptor == 0x0210
+  PASS  esp_tinyusb default would have been 0x0200
+  PASS  only bcdUSB (bytes 2..3) differs from the esp_tinyusb default
+  PASS  VID/PID unchanged (303A:4006)
+  PASS  device class triple unchanged vs esp_tinyusb default
+
+RESULT: PASS
+
+BOS descriptor
+  PASS  bLength == 5
+  PASS  bDescriptorType == 0x0F (BOS)
+  PASS  wTotalLength == actual byte count
+  PASS  bNumDeviceCaps == 1
+  PASS  platform bLength == 28
+  PASS  platform bDescriptorType == 0x10
+  PASS  bDevCapabilityType == 0x05 (PLATFORM)
+  PASS  platform bReserved == 0
+  PASS  PlatformCapabilityUUID == D8DD60DF-4589-4CC7-9CD2-659D9E648A9F
+  PASS  dwWindowsVersion == 0x06030000
+  PASS  platform ends exactly at wTotalLength
+MS OS 2.0 descriptor set
+  PASS  byte count == length declared in BOS
+  PASS  SetHeader wLength == 10
+  PASS  SetHeader wDescriptorType == 0x0000
+  PASS  SetHeader dwWindowsVersion == 0x06030000
+  PASS  SetHeader wTotalLength == actual byte count
+  PASS  vendor code in BOS matches our bRequest
+  PASS  ConfigSubset wLength == 8
+  PASS  ConfigSubset wDescriptorType == 0x0001
+  PASS  ConfigSubset bConfigurationValue == 0 (all configurations)
+  PASS  ConfigSubset bReserved == 0
+  PASS  ConfigSubset wTotalLength == set minus header
+  PASS  FunctionSubset wLength == 8
+  PASS  FunctionSubset wDescriptorType == 0x0002
+  PASS  FunctionSubset bFirstInterfaceNumber == 0 (NCM control interface)
+  PASS  FunctionSubset bReserved == 0
+  PASS  FunctionSubset wSubsetLength == function header + its features
+  PASS  CompatibleID wLength == 20
+  PASS  CompatibleID wDescriptorType == 0x0003
+  PASS  CompatibleID == b'WINNCM\0\0' (drives usbncm.inf USB\MS_COMP_WINNCM)
+  PASS  SubCompatibleID == all zero
+  PASS  RegProp wLength == 132
+  PASS  RegProp wDescriptorType == 0x0004
+  PASS  RegProp wPropertyDataType == 0x0007 (REG_MULTI_SZ)
+  PASS  RegProp wPropertyNameLength == 42 (20 chars + NUL, UTF-16)
+  PASS  property name ends with a single UTF-16 NUL
+  PASS  property name == 'DeviceInterfaceGUIDs\0'
+  PASS  RegProp wPropertyDataLength == 80 (38 chars + 2 NUL, UTF-16)
+  PASS  descriptor ends exactly at the end of the set
+  PASS  REG_MULTI_SZ payload ends with the double NUL terminator
+  PASS  payload is one GUID string
+        DeviceInterfaceGUIDs = {A4115FDC-0B38-4387-A05B-0D97CF458D40}
+Vendor request implied by the BOS: bmRequestType=0xC0 bRequest=0x01 wValue=0x0000 wIndex=0x0007 wLength=178
+
+41/41 checks passed
+RESULT: PASS
+
+s_net_cfg: 94 bytes from .flash.rodata @ 0x3c2c530a
+
+  PASS  bLength == 9
+  PASS  bDescriptorType == 0x02 (CONFIGURATION)
+  PASS  wTotalLength == actual byte count
+  PASS  bNumInterfaces == 2
+  PASS  bConfigurationValue == 1
+  PASS  bmAttributes == 0x80 (bus powered, no remote wake)
+  PASS  descriptor walk consumes exactly wTotalLength
+  PASS  3 interface descriptors = 1 control + 2 alt settings of the data interface
+  PASS  IAD covers interfaces 0..1 as CDC-NCM
+  PASS  interface 0 = NCM control (class/subclass/protocol = 02/0D/00, 1 endpoint)
+  PASS  interface 1 alt 0 = CDC data with no endpoints (NCM requirement)
+  PASS  interface 1 alt 1 = CDC data with 2 bulk endpoints
+  PASS  notification endpoint 0x81 IN
+  PASS  bulk OUT endpoint 0x02
+  PASS  bulk IN endpoint 0x82
+  PASS  exactly 3 endpoints (1 notif + 2 bulk)
+  PASS  NCM functional descriptor (CS_INTERFACE subtype 0x1A) still present
+  PASS  Ethernet Networking functional descriptor (subtype 0x0F) still present
+
+layout: interfaces=[(0, 0, 1, 2, 13, 0), (1, 0, 0, 10, 0, 1), (1, 1, 2, 10, 0, 1)] endpoints=[129, 130, 2]
+18/18 checks passed
+RESULT: PASS

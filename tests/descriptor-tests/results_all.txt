@@ -1,15 +1,40 @@
-# verification results (all parsed from the linked nucleoos.elf)
-s_net_dev_desc        12 01 10 02 00 00 00 40 3a 30 06 40 00 01 01 02 03 01  (18 B, .flash.rodata)
+# Descriptor verification results — FINAL candidate (bcdDevice 0x0101)
+#
+# Captured 2026-11-17 14:51 from the linked ELF firmware/build/nucleoos.elf,
+#   ELF SHA256 c27962647b03d31c52ab96164e288ed5aa52f959dcd47e748281bfc3adc0c216
+# The ELF itself was not retained (the build tree was removed), so this is the recorded raw output
+# of that ELF, kept verbatim. No verdict below was edited.
+#
+# Re-established against the shipped candidate binary (SHA256
+# 05cf26580fc324e3c4985c27a61f876769add1d8b534b9bf42f1e71e6dbe6e6a, 3,176,592 B, not redistributed):
+#   device descriptor @ file offset 0x752ec  12 01 10 02 00 00 00 40 3a 30 06 40 01 01 01 02 03 01
+#     -> bcdUSB 0x0210, bcdDevice 0x0101, VID/PID 303A:4006
+#   BOS 33 B @0x75368 and MS OS 2.0 set 178 B @0x75389 are byte-identical to the ELF-time dump in
+#     msos20-bytes-from-elf.txt; check_desc.py re-run on those bytes: 41/41 PASS
+#   configuration descriptor 94 B @0x7530a is byte-identical to the pre-0x0101 linked build that
+#     scored 18/18
+#   every symbol address below maps to its binary file offset by the constant 0x3c250000
+#
+# Totals: 7 device-descriptor + 41 BOS/MS OS 2.0 + 18 configuration = 66 checks, 0 FAIL.
+# The superseded run of the pre-0x0101 build (6 + 41 + 18 = 65) is kept in
+# results_all-bcddevice-0100-superseded.txt.
+
+
+=== A. device descriptor ===
+bcdDevice = 0x0101
+s_net_dev_desc        12 01 10 02 00 00 00 40 3a 30 06 40 01 01 01 02 03 01  (18 B, .flash.rodata)
 descriptor_dev_default 12 01 00 02 00 00 00 40 3a 30 06 40 00 01 01 02 03 01  (18 B)
   PASS  both descriptors are 18 bytes
   PASS  bcdUSB of the NCM device descriptor == 0x0210
   PASS  esp_tinyusb default would have been 0x0200
-  PASS  only bcdUSB (bytes 2..3) differs from the esp_tinyusb default
+  PASS  only bcdUSB (2..3) and bcdDevice (12..13) differ
+  PASS  bcdDevice reports revision 0x0101
   PASS  VID/PID unchanged (303A:4006)
   PASS  device class triple unchanged vs esp_tinyusb default
 
 RESULT: PASS
 
+=== B. BOS / MS OS 2.0 descriptor set ===
 BOS descriptor
   PASS  bLength == 5
   PASS  bDescriptorType == 0x0F (BOS)
@@ -59,6 +84,7 @@ Vendor request implied by the BOS: bmRequestType=0xC0 bRequest=0x01 wValue=0x000
 41/41 checks passed
 RESULT: PASS
 
+=== C. configuration descriptor (NCM layout intact) ===
 s_net_cfg: 94 bytes from .flash.rodata @ 0x3c2c530a
 
   PASS  bLength == 9
@@ -83,3 +109,20 @@ s_net_cfg: 94 bytes from .flash.rodata @ 0x3c2c530a
 layout: interfaces=[(0, 0, 1, 2, 13, 0), (1, 0, 0, 10, 0, 1), (1, 1, 2, 10, 0, 1)] endpoints=[129, 130, 2]
 18/18 checks passed
 RESULT: PASS
+
+=== D. strong symbols in the final ELF ===
+3c2c52ec 00000012 d s_net_dev_desc
+3c2c530a 0000005e d s_net_cfg
+3c2c5368 00000021 d nucleo_bos_desc
+3c2c5389 000000b2 d nucleo_msos20_set
+3c2cf6c0 00000012 D descriptor_dev_default
+42114f38 00000008 T tud_descriptor_bos_cb
+42114f40 00000052 T tud_vendor_control_xfer_cb
+
+=== E. image size vs partition limit ===
+image      3,176,592 bytes (0x307890)
+ota slot   3,670,016 bytes (0x380000)
+headroom   493,424 bytes (13.4%)
+FIT
+first 24 B: e9 07 02 3f b8 4f 37 40 ee 00 00 00 09 00 00 00 00 63 00 00 00 00 00 01
+app_desc magic @0x20: 3254cdab (expect 32 54 cd ab)
