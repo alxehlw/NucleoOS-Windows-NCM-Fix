@@ -1,0 +1,405 @@
+diff --git a/firmware/components/nucleo_usbnet/idf_component.yml b/firmware/components/nucleo_usbnet/idf_component.yml
+new file mode 100644
+index 0000000..be919c8
+--- /dev/null
++++ b/firmware/components/nucleo_usbnet/idf_component.yml
+@@ -0,0 +1,7 @@
++dependencies:
++  # Pinned on purpose. esp_tinyusb only asks for ">=0.14.2", so a fresh solve picks 0.21.x, while
++  # v0.8.7 was locked to 0.19.0~3 (firmware/dependencies.lock). This component now talks to TinyUSB
++  # directly (tusb.h: tud_descriptor_bos_cb / tud_vendor_control_xfer_cb / tusb_desc_device_t), and
++  # the NCM descriptor set was audited against 0.19.0.3, so the build must not drift to a different
++  # TinyUSB generation behind our back.
++  espressif/tinyusb: "0.19.0~3"
+diff --git a/firmware/components/nucleo_usbnet/include/nucleo_msos20.h b/firmware/components/nucleo_usbnet/include/nucleo_msos20.h
+new file mode 100644
+index 0000000..48ee6e0
+--- /dev/null
++++ b/firmware/components/nucleo_usbnet/include/nucleo_msos20.h
+@@ -0,0 +1,219 @@
++// nucleo_msos20 — Microsoft OS 2.0 descriptors that make Windows bind its in-box UsbNcm driver.
++//
++// Windows 10's inbox usbncm.inf matches exactly one hardware ID line: USB\MS_COMP_WINNCM. A plain
++// CDC-NCM device (Class 02 / SubClass 0d / Prot 00) is NOT matched — that line is commented out in
++// the shipped INF — so the function stays on problem code 28. The documented, driver-free fix is for
++// the firmware to advertise the Compatible ID "WINNCM" through a Microsoft OS 2.0 descriptor set.
++//
++// This header is deliberately free of TinyUSB and ESP-IDF dependencies: it is pure C structs over
++// bytes, so the exact same definition can be compiled and parsed by a host-side test without any
++// hardware or cross toolchain. Layout follows Microsoft's "Microsoft OS 2.0 Descriptors
++// Specification", whose byte-level examples give wDescriptorType as 0x0000(Set Header),
++// 0x0001(Configuration Subset), 0x0002(Function Subset), 0x0003(Compatible ID),
++// 0x0004(Registry Property). (Those are the same values TinyUSB's microsoft_os_20_type_t uses.)
++//
++// All multi-byte fields are little-endian, which is the native byte order of both the ESP32-S3 and
++// the x86 hosts that run the test, so plain uint16_t/uint32_t members serialize correctly.
++#pragma once
++#include <stdint.h>
++#include <stddef.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++// ── control-request plumbing ────────────────────────────────────────────────
++// bMS_VendorCode advertised in the BOS capability and reused as bRequest on the GET_DESCRIPTOR
++// (vendor) transfer. wIndex is the fixed MS_OS_20_DESCRIPTOR_INDEX the specification mandates.
++#define NUCLEO_MSOS20_VENDOR_CODE   0x01u
++#define NUCLEO_MSOS20_DESC_INDEX    0x07u
++
++// ── fixed descriptor values ─────────────────────────────────────────────────
++#define NUCLEO_MSOS20_SET_HEADER          0x0000u
++#define NUCLEO_MSOS20_SUBSET_CONFIG       0x0001u
++#define NUCLEO_MSOS20_SUBSET_FUNCTION     0x0002u
++#define NUCLEO_MSOS20_FEATURE_COMPAT_ID   0x0003u
++#define NUCLEO_MSOS20_FEATURE_REG_PROP    0x0004u
++
++#define NUCLEO_MSOS20_WINDOWS_VERSION     0x06030000u   // Windows 8.1 and later (covers 10/11)
++#define NUCLEO_MSOS20_REG_MULTI_SZ        0x0007u       // REG_MULTI_SZ
++
++#define NUCLEO_BOS_TYPE                   0x0Fu
++#define NUCLEO_BOS_DEVICE_CAPABILITY_TYPE  0x10u
++#define NUCLEO_BOS_CAPABILITY_PLATFORM    0x05u
++
++// The platform capability UUID D8DD60DF-4589-4CC7-9CD2-659D9E648A9F in Microsoft's documented
++// little-endian byte order (Data1/Data2/Data3 byte-swapped, Data4 tail verbatim).
++#define NUCLEO_MSOS20_PLATFORM_UUID \
++    0xDFu, 0x60u, 0xDDu, 0xD8u, 0x89u, 0x45u, 0xC7u, 0x4Cu, \
++    0x9Cu, 0xD2u, 0x65u, 0x9Du, 0x9Eu, 0x64u, 0x8Au, 0x9Fu
++
++// The NCM control interface. Must stay equal to ITF_NET in nucleo_usbnet.c (asserted there) — the
++// Function Subset has to name the interface the WINNCM compatible ID applies to.
++#define NUCLEO_MSOS20_FIRST_IFACE   0u
++
++// Stable per-device interface class GUID. Fixed on purpose: changing it would move the adapter's
++// device-interface path in Windows and orphan any per-interface settings. Upper-case, 38 chars.
++#define NUCLEO_MSOS20_GUID_STRING   "{A4115FDC-0B38-4387-A05B-0D97CF458D40}"
++
++// ── BOS descriptor (total 33 bytes = 5 header + 28 platform capability) ─────
++typedef struct __attribute__((packed)) {
++    uint8_t  bLength;             // 5
++    uint8_t  bDescriptorType;     // 0x0F BOS
++    uint16_t wTotalLength;
++    uint8_t  bNumDeviceCaps;      // 1
++} nucleo_bos_header_t;
++
++typedef struct __attribute__((packed)) {
++    uint8_t  bLength;             // 28
++    uint8_t  bDescriptorType;     // 0x10 DEVICE CAPABILITY
++    uint8_t  bDevCapabilityType;  // 0x05 PLATFORM
++    uint8_t  bReserved;           // 0
++    uint8_t  uuid[16];
++    uint32_t dwWindowsVersion;
++    uint16_t wTotalLength;        // length of the MS OS 2.0 descriptor set
++    uint8_t  bMS_VendorCode;
++    uint8_t  bAltEnumCode;        // 0 = no alternate enumeration
++} nucleo_bos_platform_t;
++
++typedef struct __attribute__((packed)) {
++    nucleo_bos_header_t   header;
++    nucleo_bos_platform_t platform;
++} nucleo_bos_t;
++
++// ── MS OS 2.0 descriptor set (178 bytes = 0xB2) ────────────────────────────
++typedef struct __attribute__((packed)) {
++    uint16_t wLength;             // 10
++    uint16_t wDescriptorType;     // 0x0000
++    uint32_t dwWindowsVersion;
++    uint16_t wTotalLength;        // whole set
++} nucleo_msos20_set_header_t;
++
++typedef struct __attribute__((packed)) {
++    uint16_t wLength;             // 8
++    uint16_t wDescriptorType;     // 0x0001
++    uint8_t  bConfigurationValue; // 0 = applies to every configuration (device has exactly one)
++    uint8_t  bReserved;
++    uint16_t wTotalLength;        // this header + everything after it
++} nucleo_msos20_cfg_subset_t;
++
++typedef struct __attribute__((packed)) {
++    uint16_t wLength;             // 8
++    uint16_t wDescriptorType;     // 0x0002
++    uint8_t  bFirstInterfaceNumber;
++    uint8_t  bReserved;
++    uint16_t wSubsetLength;       // this header + its feature descriptors
++} nucleo_msos20_func_subset_t;
++
++typedef struct __attribute__((packed)) {
++    uint16_t wLength;             // 20
++    uint16_t wDescriptorType;     // 0x0003
++    uint8_t  compatible_id[8];    // "WINNCM\0\0"
++    uint8_t  sub_compatible_id[8];
++} nucleo_msos20_compat_id_t;
++
++typedef struct __attribute__((packed)) {
++    uint16_t wLength;             // 132
++    uint16_t wDescriptorType;     // 0x0004
++    uint16_t wPropertyDataType;   // REG_MULTI_SZ
++    uint16_t wPropertyNameLength; // 42 = 20 chars + NUL, UTF-16
++    uint16_t name[21];            // "DeviceInterfaceGUIDs\0"
++    uint16_t wPropertyDataLength; // 80 = 38 chars + NUL + list NUL, UTF-16
++    uint16_t data[40];            // "{A4115FDC-...}\0\0"
++} nucleo_msos20_reg_prop_t;
++
++typedef struct __attribute__((packed)) {
++    nucleo_msos20_set_header_t  set_header;
++    nucleo_msos20_cfg_subset_t  cfg_subset;
++    nucleo_msos20_func_subset_t func_subset;
++    nucleo_msos20_compat_id_t   compat_id;
++    nucleo_msos20_reg_prop_t    guid_prop;
++} nucleo_msos20_set_t;
++
++// ── compile-time layout guarantees (fail the build, never a silent truncation) ─
++_Static_assert(sizeof(nucleo_bos_header_t)   == 5,   "BOS header must be 5 bytes");
++_Static_assert(sizeof(nucleo_bos_platform_t) == 28,  "platform capability must be 28 bytes");
++_Static_assert(sizeof(nucleo_bos_t)          == 33,  "BOS must be 0x21 bytes");
++_Static_assert(sizeof(nucleo_msos20_set_header_t)  == 10,  "set header must be 10 bytes");
++_Static_assert(sizeof(nucleo_msos20_cfg_subset_t)  == 8,   "config subset must be 8 bytes");
++_Static_assert(sizeof(nucleo_msos20_func_subset_t) == 8,   "function subset must be 8 bytes");
++_Static_assert(sizeof(nucleo_msos20_compat_id_t)   == 20,  "compatible ID must be 0x14 bytes");
++_Static_assert(sizeof(nucleo_msos20_reg_prop_t)    == 132, "registry property must be 0x84 bytes");
++_Static_assert(sizeof(nucleo_msos20_set_t)         == 178, "descriptor set must be 0xB2 bytes");
++_Static_assert(offsetof(nucleo_msos20_set_t, cfg_subset)  == 10, "config subset offset");
++_Static_assert(offsetof(nucleo_msos20_set_t, func_subset) == 18, "function subset offset");
++_Static_assert(offsetof(nucleo_msos20_set_t, compat_id)   == 26, "compatible ID offset");
++_Static_assert(offsetof(nucleo_msos20_set_t, guid_prop)   == 46, "registry property offset");
++
++// ── the descriptors themselves ──────────────────────────────────────────────
++static const nucleo_msos20_set_t nucleo_msos20_set = {
++    .set_header = {
++        .wLength          = sizeof(nucleo_msos20_set_header_t),
++        .wDescriptorType  = NUCLEO_MSOS20_SET_HEADER,
++        .dwWindowsVersion = NUCLEO_MSOS20_WINDOWS_VERSION,
++        .wTotalLength     = sizeof(nucleo_msos20_set_t),
++    },
++    .cfg_subset = {
++        .wLength            = sizeof(nucleo_msos20_cfg_subset_t),
++        .wDescriptorType    = NUCLEO_MSOS20_SUBSET_CONFIG,
++        .bConfigurationValue = 0,
++        .bReserved          = 0,
++        .wTotalLength       = sizeof(nucleo_msos20_set_t) - sizeof(nucleo_msos20_set_header_t),
++    },
++    .func_subset = {
++        .wLength              = sizeof(nucleo_msos20_func_subset_t),
++        .wDescriptorType      = NUCLEO_MSOS20_SUBSET_FUNCTION,
++        .bFirstInterfaceNumber = NUCLEO_MSOS20_FIRST_IFACE,
++        .bReserved            = 0,
++        .wSubsetLength        = sizeof(nucleo_msos20_set_t)
++                              - sizeof(nucleo_msos20_set_header_t)
++                              - sizeof(nucleo_msos20_cfg_subset_t),
++    },
++    .compat_id = {
++        .wLength         = sizeof(nucleo_msos20_compat_id_t),
++        .wDescriptorType = NUCLEO_MSOS20_FEATURE_COMPAT_ID,
++        .compatible_id   = { 'W', 'I', 'N', 'N', 'C', 'M', 0x00, 0x00 },
++        .sub_compatible_id = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
++    },
++    .guid_prop = {
++        .wLength             = sizeof(nucleo_msos20_reg_prop_t),
++        .wDescriptorType     = NUCLEO_MSOS20_FEATURE_REG_PROP,
++        .wPropertyDataType   = NUCLEO_MSOS20_REG_MULTI_SZ,
++        .wPropertyNameLength = sizeof(((nucleo_msos20_reg_prop_t *)0)->name),
++        .name = { 'D', 'e', 'v', 'i', 'c', 'e', 'I', 'n', 't', 'e', 'r', 'f', 'a', 'c', 'e',
++                  'G', 'U', 'I', 'D', 's', 0x0000 },
++        .wPropertyDataLength = sizeof(((nucleo_msos20_reg_prop_t *)0)->data),
++        .data = {
++            '{',     'A', '4', '1', '1', '5', 'F', 'D', 'C', '-',
++            '0',     'B', '3', '8', '-',
++            '4',     '3', '8', '7', '-',
++            'A',     '0', '5', 'B', '-',
++            '0',     'D', '9', '7', 'C', 'F', '4', '5', '8', 'D', '4', '0',
++            '}',     0x0000, 0x0000,
++        },
++    },
++};
++
++static const nucleo_bos_t nucleo_bos_desc = {
++    .header = {
++        .bLength         = sizeof(nucleo_bos_header_t),
++        .bDescriptorType = NUCLEO_BOS_TYPE,
++        .wTotalLength    = sizeof(nucleo_bos_t),
++        .bNumDeviceCaps  = 1,
++    },
++    .platform = {
++        .bLength            = sizeof(nucleo_bos_platform_t),
++        .bDescriptorType    = NUCLEO_BOS_DEVICE_CAPABILITY_TYPE,
++        .bDevCapabilityType = NUCLEO_BOS_CAPABILITY_PLATFORM,
++        .bReserved          = 0,
++        .uuid               = { NUCLEO_MSOS20_PLATFORM_UUID },
++        .dwWindowsVersion   = NUCLEO_MSOS20_WINDOWS_VERSION,
++        .wTotalLength       = sizeof(nucleo_msos20_set_t),
++        .bMS_VendorCode     = NUCLEO_MSOS20_VENDOR_CODE,
++        .bAltEnumCode       = 0,
++    },
++};
++
++#ifdef __cplusplus
++}
++#endif
+diff --git a/firmware/components/nucleo_usbnet/nucleo_usbnet.c b/firmware/components/nucleo_usbnet/nucleo_usbnet.c
+index e538d0a..352413a 100644
+--- a/firmware/components/nucleo_usbnet/nucleo_usbnet.c
++++ b/firmware/components/nucleo_usbnet/nucleo_usbnet.c
+@@ -10,6 +10,9 @@
+ #include "esp_event.h"
+ #include "tinyusb.h"
+ #include "tinyusb_net.h"
++#include "nucleo_msos20.h"
++#include "tusb.h"
++#include "sdkconfig.h"
+ #include "dhcpserver/dhcpserver_options.h"
+ #include "freertos/FreeRTOS.h"
+ #include "freertos/task.h"
+@@ -70,6 +73,90 @@ static const char *s_net_str[6];           // 0 lang,1 mfr,2 product,3 serial,4
+ static const uint8_t s_usb_mac[6]  = { 0x02, 0x02, 0x11, 0x22, 0x33, 0x01 };
+ static const uint8_t s_lwip_mac[6] = { 0x02, 0x02, 0x11, 0x22, 0x33, 0x02 };
+ 
++// ── Microsoft OS 2.0 declarations (descriptor bytes live in include/nucleo_msos20.h) ──────────
++// Windows 10's in-box usbncm.inf matches exactly one hardware-ID line, USB\MS_COMP_WINNCM, so a
++// plain CDC-NCM function (Class 02 / SubClass 0d / Prot 00) is never claimed: it keeps problem code
++// 28 and no adapter appears. Advertising the WINNCM Compatible ID via a BOS platform capability +
++// MS OS 2.0 descriptor set is the documented, firmware-only fix — no INF, no signature policy, no
++// registry change on the PC. None of this touches the NCM data path: the configuration descriptor,
++// the endpoints and the netif glue below are byte-for-byte what they were.
++_Static_assert(NUCLEO_MSOS20_FIRST_IFACE == ITF_NET,
++               "MS OS 2.0 function subset must name the NCM control interface");
++
++// Identity is byte-for-byte the device descriptor esp_tinyusb derives from Kconfig — same VID/PID,
++// MISC/IAD class triple, endpoint-0 size, bcdDevice and string indexes — except that bcdUSB is raised
++// from the component's 0x0200 to 0x0210. Microsoft only honours a BOS platform capability when the
++// device descriptor claims bcdUSB >= 0x0210, and at 0x0200 Windows never even asked this device for
++// a BOS, which is exactly why the WINNCM Compatible ID could not reach the host before.
++// Keeping it a compile-time constant also puts the exact bytes in .rodata, so the candidate firmware's
++// bcdUSB is verifiable from the ELF itself (see verify/check_devdesc.py).
++_Static_assert(offsetof(tusb_desc_device_t, bcdUSB) == 2,
++               "bcdUSB must stay at offset 2 for the on-disk verification");
++
++#define NUCLEO_PID_MAP(itf, n) ((CFG_TUD_##itf) << (n))
++#define NUCLEO_USB_PID (0x4000 | NUCLEO_PID_MAP(CDC, 0) | NUCLEO_PID_MAP(MSC, 1) | \
++    NUCLEO_PID_MAP(HID, 2) | NUCLEO_PID_MAP(MIDI, 3) | NUCLEO_PID_MAP(AUDIO, 4) | \
++    NUCLEO_PID_MAP(VENDOR, 5))
++
++// USB revision reported to the host. Windows records the outcome of its Microsoft OS
++// descriptor query per <VID><PID><bcdDevice> in the usbflags key of the registry, and
++// this PC already holds "303A40060100 -> osvc=0", i.e. "the device gave no valid OS
++// descriptor response". Reporting a new revision makes Windows evaluate the device
++// under a fresh key instead of inheriting that verdict, without touching the registry.
++#define NUCLEO_USB_BCD_DEVICE 0x0101
++
++static const tusb_desc_device_t s_net_dev_desc = {
++    .bLength            = sizeof(tusb_desc_device_t),
++    .bDescriptorType    = TUSB_DESC_DEVICE,
++    .bcdUSB             = 0x0210,          // >= 0x0210 so the host asks for the BOS descriptor
++#if CFG_TUD_CDC
++    .bDeviceClass       = TUSB_CLASS_MISC,
++    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
++    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
++#else
++    .bDeviceClass       = 0x00,
++    .bDeviceSubClass    = 0x00,
++    .bDeviceProtocol    = 0x00,
++#endif
++    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
++#if CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID
++    .idVendor           = USB_ESPRESSIF_VID,
++#else
++    .idVendor           = CONFIG_TINYUSB_DESC_CUSTOM_VID,
++#endif
++#if CONFIG_TINYUSB_DESC_USE_DEFAULT_PID
++    .idProduct          = NUCLEO_USB_PID,
++#else
++    .idProduct          = CONFIG_TINYUSB_DESC_CUSTOM_PID,
++#endif
++    .bcdDevice          = NUCLEO_USB_BCD_DEVICE,
++    .iManufacturer      = 0x01,
++    .iProduct           = 0x02,
++    .iSerialNumber      = 0x03,
++    .bNumConfigurations = 0x01,
++};
++
++const uint8_t *tud_descriptor_bos_cb(void)
++{
++    return (const uint8_t *)&nucleo_bos_desc;
++}
++
++bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const *request)
++{
++    if (stage != CONTROL_STAGE_SETUP) return true;      // data/ACK stages belong to the stack
++    if (request->bmRequestType_bit.type != TUSB_REQ_TYPE_VENDOR) return false;
++    // Exactly the transfer the BOS capability advertised: bRequest = bMS_VendorCode, wValue = 0,
++    // wIndex = MS_OS_20_DESCRIPTOR_INDEX. Anything else stalls, so we can't be mistaken for another
++    // vendor protocol on this device.
++    if (request->bRequest != NUCLEO_MSOS20_VENDOR_CODE ||
++        request->wValue   != 0 ||
++        request->wIndex   != NUCLEO_MSOS20_DESC_INDEX) {
++        return false;
++    }
++    return tud_control_xfer(rhport, request, (void *)(uintptr_t)&nucleo_msos20_set,
++                            (uint16_t)sizeof(nucleo_msos20_set));
++}
++
+ // ── esp_netif <-> tinyusb_net glue (mirrors examples/network/sta2eth) ─────────
+ static esp_err_t netif_transmit(void *h, void *buffer, size_t len)
+ {
+@@ -125,7 +212,7 @@ void nucleo_usbnet_start(void)
+     s_net_str[5] = s_mac_str;
+ 
+     const tinyusb_config_t tcfg = {
+-        .device_descriptor = NULL,
++        .device_descriptor = &s_net_dev_desc,
+         .string_descriptor = s_net_str,
+         .string_descriptor_count = sizeof(s_net_str) / sizeof(s_net_str[0]),
+         .external_phy = false,
+diff --git a/firmware/dependencies.lock b/firmware/dependencies.lock
+index 4c11456..f8f0614 100644
+--- a/firmware/dependencies.lock
++++ b/firmware/dependencies.lock
+@@ -9,6 +9,25 @@ dependencies:
+       registry_url: https://components.espressif.com/
+       type: service
+     version: 1.0.3
++  espressif/esp_new_jpeg:
++    component_hash: e1e7e6991193c41ed6c9fc386702aa7821433319e7aa9c3147cd3236310cd69c
++    dependencies: []
++    source:
++      registry_url: https://components.espressif.com/
++      type: service
++    targets:
++    - esp32
++    - esp32s2
++    - esp32s3
++    - esp32s31
++    - esp32p4
++    - esp32c2
++    - esp32c3
++    - esp32c5
++    - esp32c6
++    - esp32c61
++    - esp32h4
++    version: 1.0.2
+   espressif/esp_tinyusb:
+     component_hash: 6a50305bc61c7a361da8c0833642be824e92dacb0a6001719a832a4e96e471bf
+     dependencies:
+@@ -40,7 +59,7 @@ dependencies:
+       require: private
+       version: '>=5.0'
+     source:
+-      registry_url: https://components.espressif.com
++      registry_url: https://components.espressif.com/
+       type: service
+     targets:
+     - esp32s2
+@@ -72,10 +91,12 @@ dependencies:
+     version: 0.2.23
+ direct_dependencies:
+ - chmorgan/esp-libhelix-mp3
++- espressif/esp_new_jpeg
+ - espressif/esp_tinyusb
+ - espressif/mdns
++- espressif/tinyusb
+ - joltwallet/littlefs
+ - m5stack/m5gfx
+-manifest_hash: 5ea62430c077ecf60c980ede1154056b46d2f916ac54422cbec643e392c88186
++manifest_hash: 3c3d34cafec0796e7ae65d005a224f227949c786418728fb8b77388381e79091
+ target: esp32s3
+ version: 2.0.0
