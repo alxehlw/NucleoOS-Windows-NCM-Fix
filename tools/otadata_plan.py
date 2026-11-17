@@ -196,7 +196,7 @@ def selftest():
     # absolute anchor taken from a real device dump (2026-11-17, ota_0 seq=1, VALID):
     # a self-consistent but wrong CRC convention passes every other vector, so pin this.
     if crc32_le(1) != 0x4743989A:
-        fails.append(("CRC convention vs real device record", hex(crc32_le(1)))
+        fails.append(("CRC convention vs real device record", hex(crc32_le(1))))
     vectors = [
         ("blank otadata",        (None, None),                 "ota_1", 2, 0, None),
         ("seq1 only (ota_0)",    ((1, VALID), (None, None)),   "ota_1", 2, 1, 1),
