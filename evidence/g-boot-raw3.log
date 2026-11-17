@@ -1,0 +1,43 @@
+[  0.31s] W (627) nucleoos: BOOTSTEP boot-start free=179100 largest=114688
+[  0.31s] W (647) nucleoos: BOOTSTEP nvs free=176616 largest=114688
+[  0.31s] W (647) nucleo_ble: Bluetooth OFF (saving RAM): BLE mem_release=UNKNOWN ERROR — enable it in the BLE app + reboot to use BLE
+[  0.31s] W (647) nucleoos: BOOTSTEP bt-reclaim free=178268 largest=114688
+[  0.31s] W (657) nucleoos: BOOTSTEP cfg free=176596 largest=114688
+[  0.31s] W (657) nucleoos: BOOTSTEP event+log free=176412 largest=114688
+[  0.31s] W (657) nucleoos: DIAG last-reset=POWERON (cold boot) anima_phase=0xAC anima_stage=0x741B342
+[  0.31s] W (847) imu: system I2C scan: 0x18 0x34 0x69
+[  0.31s] W (847) imu: probe 0x68: chip_id=0x00 (read err=259, want 0x24)
+[  0.31s] W (847) imu: probe 0x69: chip_id=0x24 (read err=0, want 0x24)
+[  1.55s] W (2077) imu: IMU diag: bus: 0x18 0x34 0x69  | id=0x24 rd=0
+[  1.55s] W (2087) nucleoos: BOOTSTEP ui-init free=140348 largest=77824
+[  4.03s] W (4597) nucleoos: BOOTSTEP after-splash free=140152 largest=65536
+[  4.34s] W (4687) nucleoos: BOOTSTEP sd-mounted free=127748 largest=65536
+[  4.34s] W (4777) nucleoos: BOOTSTEP sd-provision free=127748 largest=65536
+[  4.34s] W (4777) nucleoos: BOOTSTEP sd-refresh free=127748 largest=65536
+[  4.96s] W (5277) nucleoos: BOOTSTEP registry free=125300 largest=51200
+[  4.96s] W (5297) extdisp: touch probe on G6: temp0=-1 temp1=-1 -> nothing
+[  4.96s] W (5297) extdisp: mode=auto -> off: no display found
+[  4.96s] W (5297) extdisp: heap free 125300 -> 125300 B, largest block 51200 B
+[  4.96s] W (5307) nucleoos: BOOTSTEP extdisp free=125300 largest=51200
+[  4.96s] W (5427) nucleoos: BOOTSTEP network free=91388 largest=31744
+[  4.96s] W (5427) nucleoos: BOOTSTEP power free=91336 largest=31744
+[  4.96s] W (5437) nucleoos: BOOTSTEP recorder free=91336 largest=31744
+[  4.96s] W (5467) nucleoos: BOOTSTEP auth free=91336 largest=31744
+[  4.96s] W (5477) nucleoos: BOOTSTEP arb free=91248 largest=31744
+[  4.96s] W (5487) nucleoos: BOOTSTEP ir free=90288 largest=31744
+[  4.96s] W (5487) nucleoos: BOOTSTEP pre-httpd free=90288 largest=31744
+[  4.96s] W (5507) nucleoos: BOOTSTEP httpd free=95896 largest=32768
+[  4.96s] W (5517) nucleoos: BOOTSTEP discovery free=90372 largest=31744
+[  4.96s] W (5537) nucleoos: BOOTSTEP setup free=90576 largest=31744
+[  4.96s] W (5537) anima: lang 'en' not bundled yet; using 'it'
+[  4.96s] W (5567) nucleoos: BOOTSTEP anima free=90012 largest=31744
+[  5.27s] W (5587) nucleoos: BOOTSTEP tts free=90012 largest=31744
+[  5.27s] W (5597) nucleoos: BOOTSTEP voice free=90012 largest=31744
+[  5.27s] W (5607) nucleoos: BOOTSTEP app-builtins free=90012 largest=31744
+[  5.27s] W (5617) nucleoos: BOOTSTEP app-setup free=90032 largest=31744
+[  5.27s] W (5877) nucleoos: BOOTSTEP app-store free=84260 largest=31744
+[  5.27s] W (5887) nucleoos: BOOTSTEP pre-app-run free=84260 largest=31744
+[  5.58s] E (5937) oom: alloc fail: 32404 B caps=0x8 in heap_caps_malloc
+[  5.58s] W (5937) ui: canvas fitted to 240x130 (31200 B) - largest block 31744 B could not hold the full 135 rows
+[ 65.40s] W (65927) applaunch: enter 'screensaver' free=36068 largest=21504
+[ 65.40s] W (65947) applaunch: enter 'screensaver' DONE free=36068

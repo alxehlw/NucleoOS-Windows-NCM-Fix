@@ -1,0 +1,6 @@
+start=2026-11-17 18:11:09
+OPEN COM4 18:11:09 hwid=USB VID:PID=303A:1001 SER=[REDACTED]
+READ_ERR 18:11:24 ClearCommError failed (PermissionError(13, '设备不识别此命令。', None, 22))
+OPEN COM4 18:11:25 hwid=USB VID:PID=303A:1001 SER=[REDACTED]
+end=2026-11-17 18:15:09
+baud=115200
